@@ -1,0 +1,223 @@
+---
+title: "SDS 315 Homework 3"
+author: "Yash Gupta - yg9449"
+date: "2025-02-08"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+library(tidyverse)
+library(ggplot2)
+library(kableExtra)
+library(mosaic)
+```
+
+Link to github respository with Rmd file: https://github.com/ygnewyork/SDS_HW3, Some numbers in confidence intervals might be a bit different due to Monte Carlo variability in bootstrapping
+
+## Question 1 - Gas Price theories
+
+```{r}
+gas <- read_csv("gasprices.csv", show_col_types = FALSE)
+```
+
+### Theory A - Gas Prices charge more if they lack direct competition in sight
+
+```{r}
+
+
+boot_competition <- do(10000)*diffmean(Price ~ Competitors, data = resample(gas))
+                                   
+ggplot(data = boot_competition) +
+  geom_histogram(aes(x = diffmean)) +
+  labs(
+    title = "Mean price difference depending if gas stations have competitors or not",
+    x = "Difference of Means",
+    y = "Frequency"
+  ) +
+  theme_minimal()
+
+print(confint(boot_competition, level = 0.95))
+
+```
+The theory being tested is if gas prices charge more if they lack direct competition in sight. The evidence to this, however, points to there being no difference, and the 95% confidence interval using difference of means based on there being competitors contains zero, meaning it is not statistically significant. So, this theory is unsupported by the data.
+
+### Theory B - The richer the area, the higher the gas prices
+
+```{r}
+
+boot_income <- do(10000)*cor(Price ~ Income, data = resample(gas))
+
+ggplot(data = boot_income) +
+  geom_histogram(aes(x = cor)) +
+  labs(
+    title = "Correlation of Price to Income",
+    x = "Correlation Coefficient",
+    y = "Frequency"
+  ) +
+  theme_minimal()
+
+print(confint(boot_income, level = 0.95))
+```
+The theory being tested is if gas prices are higher if the income of the surrounding area is higher. The evidence to this points to there being a statistically significant difference as the correlation coefficient estimate is 0.396 as found through the 95% confidence interval, with lower bound being 0.197 and upper bound being 0.568, and the estimate indicates a moderately strong degree of association between gas prices and income. So, this theory is supported by the data.
+
+### Theory C - Gas stations at stoplights charge more
+
+```{r}
+boot_stoplight <- do(10000)*diffmean(Price ~ Stoplight, data = resample(gas))
+                                   
+ggplot(data = boot_stoplight) +
+  geom_histogram(aes(x = diffmean)) +
+  labs(
+    title = "Mean price difference depending if gas stations is at a stoplight or not",
+    x = "Difference of Means",
+    y = "Frequency"
+  ) +
+  theme_minimal()
+
+print(confint(boot_stoplight, level = 0.95))
+```
+The theory being tested is if gas stations at stoplights charge more than gas lights not on stoplights. The evidence to this, however, points to there being no difference, and the 95% confidence interval using difference of means based on there being a stoplight contains zero, meaning it is not statistically significant. So, this theory is unsupported by the data.
+
+### Theory D - Gas stations with direct highway access charge more
+
+```{r}
+boot_highway <- do(10000)*diffmean(Price ~ Highway, data = resample(gas))
+                                   
+ggplot(data = boot_highway) +
+  geom_histogram(aes(x = diffmean)) +
+  labs(
+    title = "Mean price difference depending if gas stations is near a highway or not",
+    x = "Difference of Means",
+    y = "Frequency"
+  ) +
+  theme_minimal()
+
+print(confint(boot_highway, level = 0.95))
+```
+The theory being tested is if gas stations with direct highway access charge more. The evidence to this points to there being a statistically significant difference, as the 95% confidence interval does not contain zero, meaning it is statistically significant. The difference is about 4.5 cents. So, this theory is supported by the data.
+
+### Theory E - Shell charges more than all other non-Shell brands.
+
+```{r}
+gas$IsShell <- ifelse(gas$Name == "Shell", "Shell", "Other")
+
+boot_shell <- do(10000)*diffmean(Price ~ IsShell, data = resample(gas))
+                                   
+ggplot(data = boot_shell) +
+  geom_histogram(aes(x = diffmean)) +
+  labs(
+    title = "Mean price difference depending if a gas station is Shell or not",
+    x = "Difference of Means",
+    y = "Frequency"
+  ) +
+  theme_minimal()
+
+print(confint(boot_shell, level = 0.95))
+```
+The theory being tested is if Shell gas stations charge more than other brands of gas stations. The evidence to this, however, points to there being no difference, and the 95% confidence interval using difference of means based on the gas station being "Shell" contains zero, meaning it is not statistically significant. So, this theory is unsupported by the data.
+
+\newpage
+
+## Question 2
+
+### Part A
+
+```{r}
+
+cars <- read_csv("sclass.csv", show_col_types = FALSE)
+
+filtered_2011 <- filter(cars, year == 2011, trim == "63 AMG")
+
+boot_mile_2011 <- do(10000)*mean(~mileage, data = resample(filtered_2011))
+
+confint(boot_mile_2011, level = 0.95)
+
+```
+95% confidence interval for average mileage of 2011 S-Class 63 AMGs - Lower bound is about 26215.26, Upper bound is about 31823.72, estimate is about 28997.34. These are the average values in miles of 2011 S-Class 63 AMGs when this data was collected.
+
+### Part B
+
+```{r}
+
+filtered_2014 <- filter(cars, year == 2014, trim == "550")
+
+boot_mile_2014 <- do(10000)*mean(~mileage, data = resample(filter(filtered_2014, color == "Black")))
+
+confint(boot_mile_2014, level = 0.95)
+
+```
+95% confidence interval for average mileage of 2014 S-Class 550s that are painted black - Lower bound is about 990.06, Upper bound is about 1360.14, estimate is about 1172.45. These are the average values in miles of 2014 S-Class 550s when this data was collected.
+
+\newpage
+
+## Question 3
+
+### Part A
+
+```{r}
+  
+nbc <- read_csv("nbc_pilotsurvey.csv", show_col_types = FALSE)
+
+filtered_a <- filter(nbc, Show == "Living with Ed" | Show == "My Name is Earl")
+
+boot_nbc_a <- do(10000)*diffmean(Q1_Happy ~ Show, data = resample(filtered_a))
+
+confint(boot_nbc_a, level = 0.95)
+
+filtered_a %>% 
+  group_by(Show) %>% 
+  summarize(Q1_Happy_Rating = mean(Q1_Happy, na.rm = TRUE))
+
+```
+The question we are trying to answer is if the shows "Living with Ed" and "My name is Earl" have different ratings of happiness reported by the audience. I first filtered the data to these two shows. I then bootstrapped the data through 10,000 trials, and I used a 95% confidence interval in order to best identify if there was a significant difference in the ratings of happiness by the show. According to my results, the lower bound was below zero and the upper bound was above zero - lower bound: about -0.400 and upper bound: about 0.104. As the confidence interval includes zero, there is not statistically significantly evidence that one of the shows consistently produces a higher mean happy response among the viewers.
+
+### Part B
+
+```{r}
+  
+filtered_b <- filter(nbc, Show == "The Biggest Loser" | Show == "The Apprentice: Los Angeles")
+
+boot_nbc_b <- do(10000)*diffmean(Q1_Annoyed ~ Show, data = resample(filtered_b))
+
+confint(boot_nbc_b, level = 0.95)
+
+filtered_b %>% 
+  group_by(Show) %>% 
+  summarize(Q1_Annoyed_Rating = mean(Q1_Annoyed, na.rm = TRUE))
+
+```
+The question we are trying to answer is if the shows "The Biggest Loser" and "The Apprentice: Los Angeles" have different ratings of annoyance reported by the audience. I first filtered the data by these two shows. I then bootstrapped the data through 10,000 trials, and I used a 95% confidence interval in order to best identify if there was a significant difference in the ratings of happiness by the show. According to my results, the lower bound was below zero and the upper bound was also below zero - lower bound: about -0.522 and upper bound: about -0.021. As the confidence interval does not include zero, there is statistically significantly evidence that one of the shows produces a higher mean annoyance response among the viewers. As evidenced by the means, The Apprentice: Los Angeles had a statistically significant higher annoyed rating than The Biggest Loser, with the estimate being about a difference of 0.271 on a scale out of 5.
+
+### Part C
+
+```{r}
+  
+filtered_c <- filter(nbc, Show == "Dancing with the Stars")
+
+filtered_c$IsConfusing <- ifelse(filtered_c$Q2_Confusing >= 4, TRUE, FALSE)
+
+boot_nbc_c <- do(10000) * prop(~IsConfusing, data = resample(filtered_c))
+
+confint(boot_nbc_c, level = 0.95)
+
+```
+The question we are trying to answer is identifying the proportion of American TV watchers of the show "Dancing with the Stars" would agree or strongly agree that the show was confusing. I first filtered the data by the show, and created a new variable identifying if it was determined confusing or not. I then bootstrapped the data through 10,000 trials, and I used a 95% confidence interval in order to best identify if there was a significant difference in the ratings of happiness by the show. The 95% confidence interval has a lower bound of about 0.039 and an upper bound of about 0.116, with an estimate of 0.077. My results indicate that about 7.7% of people overall would indicate that the show was confusing, and give a response of 4 or greater to the "Q2_Confusing" question.
+
+## Question 4
+
+```{r}
+
+ebay <- read_csv("ebay.csv", show_col_types = FALSE)
+
+ebay <- mutate(ebay, rev_ratio = rev_after / rev_before)
+
+boot_ebay <- do(10000)*diffmean(rev_ratio ~ adwords_pause, data = resample(ebay))
+
+confint(boot_ebay, level = 0.95)
+
+ebay %>% 
+  group_by(adwords_pause) %>% 
+  summarize(Revenue = mean(rev_ratio, na.rm = TRUE))
+```
+The question we are trying to answer is if the revenue ratio is the same in both the treatment and control groups based on whether they paused or didn't pause paid advertising on Google AdWords. I first created a rev_ratio variable that indicated the ratio of the revenue, and I then did a bootstrap simulation for 10,000 trials on whether the rev_ratio had ads or not. There was a statically significant difference, as the 95% confidence interval did not include zero, with the lower bound being about -0.090 and the upper bound being about -0.013, with the estimate lying close to -0.052. This means that on average Ebay made 5.2% more with ads than without, as "0" indicates a continuation in the ads and "1" indicates a pause in the ads. As a result, we can say that having paid search advertising does significantly help the profits, and the data favors the idea that paid search advertising on Google creates extra revenue for EBay.
